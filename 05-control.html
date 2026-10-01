@@ -1,0 +1,131 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>05 · 条件码、分支、循环与 switch · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a aria-current=page href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>05 · 条件码、分支、循环与 switch</h1>
+<p>来源：第 5 讲 pp.9～64；小班第 5 讲；教材 §3.6；2025 阶段卷第 10～14 题。</p>
+<h2 id="section-1">四个主要条件码<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>CF：最高位的进位或减法借位，用于无符号判断。ZF：结果为零。SF：结果最高位为 1。OF：有符号溢出。PF 表示低字节中 1 的个数为偶数，浮点比较还会用它表达无序结果。</p>
+<p>8 位加法：<code>0x7F+1=0x80</code>，CF=0、OF=1、SF=1、ZF=0；<code>0xFF+1=0</code>，CF=1、OF=0、SF=0、ZF=1。<strong>CF 不能替代 OF，SF 也不能单独判断带溢出的有符号大小。</strong></p>
+<p><code>cmp b,a</code> 计算 a-b 的标志而不保存差值；<code>test b,a</code> 计算 a&amp;b 的标志而不保存结果。<code>test x,x</code> 判断零/负；<code>test mask,x</code> 检查特定位。</p>
+<h2 id="section-2">条件选择表<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<p>下表假设前一条设置标志的是 <code>cmp b,a</code>，要判断 a 与 b。后缀可用于 jcc、setcc、cmovcc（具体操作宽度限制不同）。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>含义</th>
+<th>后缀</th>
+<th>标志条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>等于</td>
+<td>e / z</td>
+<td>ZF</td>
+</tr>
+<tr>
+<td>不等于</td>
+<td>ne / nz</td>
+<td>!ZF</td>
+</tr>
+<tr>
+<td>有符号小于</td>
+<td>l / nge</td>
+<td>SF xor OF</td>
+</tr>
+<tr>
+<td>有符号小于等于</td>
+<td>le / ng</td>
+<td>(SF xor OF) or ZF</td>
+</tr>
+<tr>
+<td>有符号大于</td>
+<td>g / nle</td>
+<td>!(SF xor OF) and !ZF</td>
+</tr>
+<tr>
+<td>有符号大于等于</td>
+<td>ge / nl</td>
+<td>!(SF xor OF)</td>
+</tr>
+<tr>
+<td>无符号小于</td>
+<td>b / c / nae</td>
+<td>CF</td>
+</tr>
+<tr>
+<td>无符号小于等于</td>
+<td>be / na</td>
+<td>CF or ZF</td>
+</tr>
+<tr>
+<td>无符号大于</td>
+<td>a / nbe</td>
+<td>!CF and !ZF</td>
+</tr>
+<tr>
+<td>无符号大于等于</td>
+<td>ae / nb / nc</td>
+<td>!CF</td>
+</tr>
+<tr>
+<td>负 / 非负</td>
+<td>s / ns</td>
+<td>SF / !SF</td>
+</tr>
+<tr>
+<td>溢出 / 未溢出</td>
+<td>o / no</td>
+<td>OF / !OF</td>
+</tr>
+</tbody>
+</table></div>
+<p>为什么 l 是 SF xor OF？若 a-b 不溢出，差值符号就是真实大小关系；若溢出，截断后的符号翻转，OF=1 正好把 SF 反过来。例如 8 位 -128-1 得到 127，SF=0、OF=1，但 -128&lt;1 仍为真。</p>
+<h2 id="section-3">set、jump 与 cmov<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<p><code>setle %al</code> <strong>只写一个字节</strong>，要返回完整 int 布尔值常接 <code>movzbl %al,%eax</code>。不能把 <code>setle %rax</code> 当作合法的 64 位 set 指令。</p>
+<p>条件跳转根据标志修改控制流；无条件跳转 <code>jmp label</code> 是直接跳转，<code>jmp *%rax</code> 或 <code>jmp *table(,%rdi,8)</code> 是间接跳转。相对跳转目标是<strong>下一条指令地址 + 带符号位移</strong>。例如 <code>0x100: eb fe</code> 长 2 字节，目标 <code>0x102-2=0x100</code>。</p>
+<p>cmov 根据条件把源值复制到目标寄存器；目标不能是内存，没有普通 8 位 cmov 形式。它通常先计算候选值，再选择结果，减少错误分支预测带来的代价。代价是候选表达式都可能执行：昂贵函数、不安全解引用、可见副作用不能随便提前执行。<strong>内存源 cmov 不保证在条件不满足时避免访存异常</strong>。</p>
+<pre><code class="language-asm"># 返回 x&lt;=y 的布尔值，x、y 是 long
+cmpq %rsi, %rdi
+setle %al
+movzbl %al, %eax
+ret
+</code></pre>
+<p>读分支时检查最后一次修改标志的指令，不能无视中间的 add/sub/test；mov 和 lea 则通常保留原标志。</p>
+<h2 id="section-4">if 与条件表达式<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<p>先画控制流图：比较块 → 真分支/假分支 → 汇合。编译器可能让真分支顺序执行、假分支跳转，也可能相反；不要按标签位置猜真假。</p>
+<pre><code class="language-text">if (test) A else B
+    ↓
+if (!test) goto else_part;
+A; goto done;
+else_part: B;
+done:
+</code></pre>
+<p>条件传送示例：先算 <code>r=x-y</code>、<code>t=y-x</code>，再以 <code>x&gt;y</code> 选择 t；得到的是 <code>x&lt;=y ? x-y : y-x</code>，是非正的差值，<strong>不能只看函数名 absdiff 就认定为绝对值</strong>。2025 阶段卷中的同名函数正是一个提醒。</p>
+<h2 id="section-5">三种循环与边界<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>do-while：先执行 Body，再 Test，至少执行一次。</li>
+<li>while 跳到中间版本：入口先跳 Test，条件成立转 Body，Body 后回 Test。</li>
+<li>while guarded-do 版本：入口先否定条件检查，失败直接结束；成功后采用 do-while。</li>
+<li>for：Init → Test → Body → Update → Test；<code>continue</code> 应进入 Update，不能把它错误地直连 Test。</li>
+</ul>
+<p>还原汇编时依次找初始化、循环体、测试、更新、出口、返回值。循环不一定有单独的“索引 i”，可能通过指针推进或移位掩码控制。</p>
+<pre><code class="language-c">/* unsigned 版本明确位级行为；限制 1&lt;=n&lt;=63 才保证推进 */
+unsigned long pick(unsigned long x, unsigned n) {
+    unsigned long result = 0;
+    for (unsigned long mask=1; mask!=0; mask&lt;&lt;=n)
+        result |= x &amp; mask;
+    return result;
+}
+</code></pre>
+<p>n=0 会使 mask 不变化；n≥位宽的 C 移位不合法，硬件低位掩码也不等于修复了源代码。Popcount 可逐位累加 <code>(x&amp;1)</code> 再右移，也可反复 <code>x&amp;=x-1</code>；x86 的 POPCNT 是专门指令，但编译器是否采用取决于目标 ISA、选项和识别能力。</p>
+<h2 id="section-6">switch 与跳转表<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>稠密 case 常用跳转表，稀疏 case 可能采用比较树。流程通常为：索引归一化 → 范围检查 → 间接跳转 → 各 case 代码。</p>
+<pre><code class="language-asm">subq $3, %rdi             # 原 case 从 3 开始
+cmpq $4, %rdi
+ja .Ldefault              # 无符号检查同时排除原值&lt;3 或 &gt;7
+jmp *.Ltable(,%rdi,8)     # 每项是 8 字节代码地址
+</code></pre>
+<p>表中的第 0 项对应原值 3，不一定对应 case 0。多个 case 可共享同一地址；缺失值可指向 default；fall-through 表现为执行一个代码块后直接接另一个块，不意味着两个标签必须相同。</p>
+<p>位置无关代码可能用 4 字节相对偏移表：先读有符号表项，再加表基址得到目标，因此“所有跳转表表项必为 8 字节”错误。一定看 <code>.quad/.long</code> 和加载指令。</p>
+<p>调试时 <code>x/8xg 地址</code> 可显示 8 个 8 字节十六进制单元；这是显示内存表项，不自动执行跳转。反汇编区分机器码、表中数据与真实指令边界。</p>
+<h2 id="section-7">自检<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>给任意 cmp 顺序，能选择正确的 signed/unsigned 条件；能解释 set 后为什么需要零扩展；能给出不适合 cmov 的具体例子；能从循环还原初值、终止条件和更新；能处理 switch 的默认分支、重复标签和穿透。教材作业 3.60、3.63。</p>
+<div class="pager"><a href="04-assembly-basics.html">上一章<br>04 · 机器级编程基础</a><a href="06-procedures.html">下一章<br>06 · 过程调用、栈与 ABI</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">四个主要条件码</a><a href="#section-2">条件选择表</a><a href="#section-3">set、jump 与 cmov</a><a href="#section-4">if 与条件表达式</a><a href="#section-5">三种循环与边界</a><a href="#section-6">switch 与跳转表</a><a href="#section-7">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

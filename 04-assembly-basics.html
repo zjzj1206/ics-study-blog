@@ -1,0 +1,143 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · 机器级编程基础 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a aria-current=page href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>04 · 机器级编程基础</h1>
+<p>来源：第 4 讲；第 5 讲 pp.2～8；小班第 4 讲；教材 §3.1～3.5。</p>
+<h2 id="section-1">历史与抽象层次<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>x86 经 8086 的 16 位、80386 的 IA-32 32 位，发展到 x86-64；AMD64 是对 x86 的 64 位扩展，Intel 的 Itanium/IA-64 是不同路线，不能把 IA-64 当作 x86-64 的别名。历史兼容性解释了寄存器别名与多种指令形式。课件中 Coffee Lake 等参数是历史案例，不是 2026 年最新硬件。</p>
+<p>机器码是处理器解码的字节；汇编是可读表示。x86 指令变长，反汇编必须从正确的边界开始。ISA 规定可见语义，不要求“每条指令都只用一个时钟周期”。</p>
+<h2 id="section-2">AT&amp;T 语法<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<p><code>指令 源,目的</code>；寄存器加 <code>%</code>，立即数加 <code>$</code>，内存由地址表达式表示。<code>movq $8,%rax</code> 写常数，<code>movq 8,%rax</code> 读取绝对地址 8 的内存，含义完全不同。Intel 语法常是目的在前，不可混读。</p>
+<p>后缀 b/w/l/q 对应 1/2/4/8 字节；l 是 longword，q 是 quadword。能从寄存器确定宽度时汇编器可能接受省略后缀；仅有立即数和内存时应明确宽度。寄存器名字必须匹配操作宽度，例如 <code>movq %eax,%rbx</code> 不合法。</p>
+<h2 id="section-3">全部通用寄存器与局部访问<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>64 位</th>
+<th>32 位</th>
+<th>16 位</th>
+<th>低 8 位</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rax/rbx/rcx/rdx</td>
+<td>eax/ebx/ecx/edx</td>
+<td>ax/bx/cx/dx</td>
+<td>al/bl/cl/dl</td>
+</tr>
+<tr>
+<td>rsi/rdi/rbp/rsp</td>
+<td>esi/edi/ebp/esp</td>
+<td>si/di/bp/sp</td>
+<td>sil/dil/bpl/spl</td>
+</tr>
+<tr>
+<td>r8～r15</td>
+<td>r8d～r15d</td>
+<td>r8w～r15w</td>
+<td>r8b～r15b</td>
+</tr>
+</tbody>
+</table></div>
+<p>历史高字节 ah/bh/ch/dh 是对应低 16 位的高 8 位，不能与需要 REX 前缀的某些操作数组合使用。</p>
+<p>**写 32 位通用寄存器会清零对应 64 位寄存器高 32 位；写 8/16 位通常保留其他位。**若 rax 原为 FFFFFFFFFFFFFFFF，<code>movb $1,%al</code> 后为 FFFFFFFFFFFFFF01；<code>movl $1,%eax</code> 后为 0000000000000001。读取 eax 不会自行改写 rax。</p>
+<h2 id="section-4">寻址与 LEA<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<pre><code class="language-text">D(Rb,Ri,S) 的有效地址 = D + R[Rb] + S·R[Ri]
+S ∈ {1,2,4,8}，省略的项按默认规则处理
+</code></pre>
+<p>Rb 是基址，Ri 是索引，D 是有符号位移。比例因子适合常见元素大小。<code>%rsp</code> 不能作为普通 SIB 索引寄存器。位移前不写 <code>$</code>。</p>
+<p>设 rdx=0x1000、rcx=3：<code>0x10(%rdx,%rcx,8)</code> 地址为 0x1028。</p>
+<ul>
+<li><code>movq 0x10(%rdx,%rcx,8),%rax</code> 从该地址读 8 字节。</li>
+<li><code>leaq 0x10(%rdx,%rcx,8),%rax</code> 只把计算出的 0x1028 写入 rax，不访问该地址的内存，也不更新条件码。</li>
+<li><code>leaq (%rax,%rax,4),%rdx</code> 是乘 5 的整数计算；LEA 的输入无需一定是有效指针。</li>
+<li>RIP 相对寻址用于位置无关的代码和全局数据访问；以具体指令给出的 next RIP 与位移算地址。</li>
+</ul>
+<h2 id="section-5">数据传送和扩展<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<p>普通 mov 支持立即数→寄存器/内存、寄存器→寄存器/内存、内存→寄存器，不支持两个显式内存操作数直接相搬，也不能以立即数为目的。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>指令族</th>
+<th>含义与细节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>movb/w/l/q</td>
+<td>同宽传送，不改变条件码</td>
+</tr>
+<tr>
+<td>movzbl / movzbq / movzwl / movzwq</td>
+<td>零扩展，名字中前后宽度分别指源和目标</td>
+</tr>
+<tr>
+<td>movsbl / movsbq / movswl / movswq / movslq</td>
+<td>符号扩展</td>
+</tr>
+<tr>
+<td>cltq</td>
+<td>eax 符号扩展到 rax，无显式操作数</td>
+</tr>
+<tr>
+<td>cqto</td>
+<td>把 rax 符号扩展到 rdx:rax，准备有符号除法</td>
+</tr>
+<tr>
+<td>movabsq</td>
+<td>可用完整 64 位立即数装入寄存器</td>
+</tr>
+</tbody>
+</table></div>
+<p>没有必要用 <code>movzlq</code> 做 32→64 零扩展，写 32 位寄存器自然清高位。<code>movq</code> 的常见立即数形式使用可符号扩展的 imm32，不能无条件认为任意 64 位立即数都能编码在此形式中；汇编器可能选择其他编码。</p>
+<h2 id="section-6">算术与逻辑指令<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p><code>add S,D</code> 得到 D+S；<code>sub S,D</code> 得到 D-S；二/三操作数 <code>imul</code> 保留目标宽度内的积。<code>inc/dec</code> 加减 1；<code>neg</code> 求补码负值；<code>not</code> 按位取反。<code>and/or/xor</code> 位运算，<code>sal/shl</code> 左移，<code>sar</code> 算术右移，<code>shr</code> 逻辑右移。</p>
+<p>变量移位计数通常放在 <code>%cl</code>；64 位移位指令使用计数低 6 位、32 位用低 5 位。这是指令规则，不改变 C 的越界移位规定。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>条件码影响（常用规则）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>add/sub/neg/cmp</td>
+<td>按结果设置相关标志；neg 非零操作数使 CF=1</td>
+</tr>
+<tr>
+<td>inc/dec</td>
+<td>设置算术结果标志，但保持 CF</td>
+</tr>
+<tr>
+<td>and/or/xor/test</td>
+<td>更新 ZF/SF/PF；CF=OF=0</td>
+</tr>
+<tr>
+<td>mov/lea/not</td>
+<td>不修改条件码</td>
+</tr>
+<tr>
+<td>shift</td>
+<td>计数 0 不改标志；OF 通常只在计数 1 时有定义，须按指令查表</td>
+</tr>
+</tbody>
+</table></div>
+<p>不要把乘除法后的所有标志都当成可用比较结果；例如 imul 主要通过 CF/OF 指示截断，除法后相关算术标志未定义。</p>
+<h2 id="section-7">双倍宽乘除<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>64 位单操作数 <code>mulq S</code>：无符号 <code>rdx:rax = rax*S</code>；<code>imulq S</code>：有符号的 128 位乘积。二操作数 <code>imulq S,D</code> 与单操作数形式不同，不能混淆隐含寄存器。</p>
+<p><code>divq S</code>/<code>idivq S</code> 用 rdx:rax 作为 128 位被除数，商写 rax、余数写 rdx。无符号 64 位被除数通常先清 rdx；有符号先 <code>cqto</code>。除数为零或商超出目标寄存器范围触发除法异常；<code>TMin / -1</code> 是常见边界。idiv 商向零截断，余数与被除数同号或为零。</p>
+<pre><code class="language-asm"># long x / long y，x 在 rdi，y 在 rsi
+movq %rdi, %rax
+cqto
+idivq %rsi          # 商 rax，余数 rdx
+</code></pre>
+<h2 id="section-8">解读代码的方法<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<p>为每个寄存器写一个符号表达式，逐条替换；只在内存读写时引入 <code>M[address]</code>。例如：</p>
+<pre><code class="language-asm">leaq (%rdi,%rdi,2), %rax    # 3*x
+leaq (%rax,%rsi,4), %rax    # 3*x + 4*y
+subq %rdx, %rax            # 3*x + 4*y - z
+ret
+</code></pre>
+<p>计数访问时先看题目是否排除取指。<code>movq (%rdi),%rax</code> 有地址寄存器读取、数据寄存器写入和一次数据内存读取；与“几个操作数”不是同一个计数口径。2025 阶段卷 swap 四条 mov 按其口径共 8 次通用寄存器访问、4 次数据内存访问。</p>
+<h2 id="section-9">自检<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<p>能检查任意 mov 是否有非法操作数组合；区分地址计算和解引用；追踪子寄存器写入；解释乘除的隐含寄存器；把复杂算式还原为 C，并保留类型/溢出的前提。教材作业 3.58、3.59。</p>
+<div class="pager"><a href="03-floating-point.html">上一章<br>03 · 浮点表示、舍入与运算</a><a href="05-control.html">下一章<br>05 · 条件码、分支、循环与 switch</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">历史与抽象层次</a><a href="#section-2">AT&amp;T 语法</a><a href="#section-3">全部通用寄存器与局部访问</a><a href="#section-4">寻址与 LEA</a><a href="#section-5">数据传送和扩展</a><a href="#section-6">算术与逻辑指令</a><a href="#section-7">双倍宽乘除</a><a href="#section-8">解读代码的方法</a><a href="#section-9">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

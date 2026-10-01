@@ -1,0 +1,131 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>13 · 小班拓展、边角知识与作业路线 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a aria-current=page href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>13 · 小班拓展、边角知识与作业路线</h1>
+<p>逐项归并本地第 2～7 讲研讨主题；本章保留课堂提出的开放讨论与术语，不把它们伪装成只有唯一标准答案的计算题。</p>
+<h2 id="section-1">第 2 讲：表示与整数<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>研讨 1 的进制转换、位运算/逻辑运算、短路与移位见第 02 章。补充的设计问题：二进制容易用两种稳定物理状态表示，数字电路有噪声容限；十六进制是在不损失位边界的前提下缩短书写。8 位字节有历史、字符表示、寻址与硬件生态原因，不是数学上唯一最优方案。字更长能表示更大范围/地址，也提高存储、传输和硬件成本；嵌入式设备可采用不同取舍。</p>
+<p>研讨 2 的原码/反码比较、补码取负证明、混合类型比较、扩展截断、三类加法溢出、常数乘法和大小端均见第 02 章。补码取负证明：w 位下 <code>~x=2^w-1-x</code>，所以 <code>~x+1 ≡ -x (mod 2^w)</code>；其位向量意义对所有 x 成立。</p>
+<p>设计自测：8 位用 DA 与 6F 做所有位运算；16 位用 0、1、-1、32767、-32768 做 B2U/B2T；用同一个 32 位常量画两种端序。要说清中间表达式是否先提升为 int。</p>
+<h2 id="section-2">第 3 讲：浮点的术语与设计<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sign / s</td>
+<td>符号</td>
+</tr>
+<tr>
+<td>significand / M</td>
+<td>有效数；规格化形式含隐含前导 1</td>
+</tr>
+<tr>
+<td>exponent / E</td>
+<td>实际指数</td>
+</tr>
+<tr>
+<td>exp / e</td>
+<td>存储的阶码字段</td>
+</tr>
+<tr>
+<td>fraction / frac</td>
+<td>存储的小数位字段，不包含隐藏的 1</td>
+</tr>
+<tr>
+<td>MSB / LSB</td>
+<td>最高/最低有效位</td>
+</tr>
+<tr>
+<td>bias</td>
+<td>指数偏置</td>
+</tr>
+<tr>
+<td>equispaced</td>
+<td>等间距，非规格化区域相邻值差固定</td>
+</tr>
+<tr>
+<td>ULP</td>
+<td>给定格式与位置的最后一位单位</td>
+</tr>
+</tbody>
+</table></div>
+<p>偏置编码让正的浮点数主要按指数再按小数有序排列；全 0、全 1 阶码留给特殊类别，配合隐藏位提高规格化精度。指数正负数量不完全对称是偏置、保留编码及边界选择共同的结果，不应仅解释成“正数比较重要”。</p>
+<p>非规格化把零附近的断层补成均匀步长；正负零保留趋近方向等信息，同时让某些普通等式与位比较不能直接互换。无穷允许溢出或除零的结果继续传播，但不修复数值算法本身。NaN 让无效结果显式传播，其载荷含义不能跨平台随意假设。</p>
+<p>阿贝尔群要求封闭性、结合律、单位元、逆元与交换律；浮点加法集合不能简单视为实数加法的阿贝尔群，因为舍入破坏结合律等条件。关于单调性，区分弱单调/严格单调，乘数的正负以及 NaN；详见第 03 章。</p>
+<h3 id="section-3">两个事故案例及应当学到什么<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h3>
+<p>Ariane 5 首飞失败的调查指出惯性参考软件中一次数值转换溢出及未妥善保护、复用假设不适用等问题；不要简单概括为“浮点精度不足导致爆炸”。Patriot 的历史事故与时间表示截断误差长期积累有关。复习价值在于单位、可表示范围、转换、误差随时间累积与异常处理，而不是背损失金额。参考 <a href="https://www.esa.int/Newsroom/Press_Releases/Ariane_501_-_Presentation_of_Inquiry_Board_report">ESA 调查报告</a> 与 <a href="https://www.gao.gov/products/imtec-92-26">美国 GAO 报告</a>。</p>
+<p>AI 格式的原理比较见第 03 章。常用格式与硬件生态不断变化，课上的开放调研应注明时间与具体设备，不能用一份不带日期的“主流排名”当永久知识点。</p>
+<h2 id="section-4">第 4 讲：硬件与指令拓展<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<p>课件里的市场产品/主频/制程/核数是历史案例。看硬件参数时区分 ISA、实现、制造工艺命名、基准/睿频、核心/线程、功耗设计口径；制程标签不是每个晶体管某一长度的直接测量值，GHz 也不能跨微体系结构单独比较性能。</p>
+<p>CPU 数据通路、C→目标文件、反汇编字段、寄存器局部写入、传送类型、寻址、LEA 和算逻指令见第 01/04 章。没有普通 memory-to-memory mov 是编码和指令设计约束，<strong>不意味着 x86 完全没有涉及两处内存的字符串操作</strong>。不能把“普通 mov 的操作数组合”扩大为整个 ISA 的定律。</p>
+<p>实操可写一个小的 swap/算术函数，用 <code>gcc -Og -S</code> 比较汇编，再用 objdump 看指令字节。编译器、PIE、栈保护和优化级别不同都会影响结果；核心语义比和旧课件逐行完全一致更重要。</p>
+<h2 id="section-5">第 5 讲：控制流拓展<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<p>CF/ZF/SF/OF、cmp/test 对照、set 返回、分支反转、cmov 不适用情形、三种循环转换与跳转表见第 05 章。cmov 的性能收益来自避免不可预测分支，而不是“少算了一边”；预测很准或一边特别昂贵时不一定有益。</p>
+<p>POPCNT 支持要看目标机器与编译选项。分析 if-else 链最多跳转次数时必须给出具体编译形态，不能只数 C 的 if 个数；一次路径可能包含条件跳转和合流的无条件跳转。跳转表也是先做范围检查，不是免费一步覆盖所有输入。</p>
+<h2 id="section-6">第 6 讲：ABI 与递归拓展<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>传递控制、数据、存储三条线以及调用者/被调用者保存规则见第 06 章。硬件规定 call 写返回地址，软件规定参数寄存器；Windows 与 Linux 的差异是 ABI，不是 CPU 在两种 OS 上换了一套基本 call 语义。</p>
+<p>历史上某些语言实现不支持或限制递归，常与静态分配局部存储、运行时约束或语言设计有关；支持递归需要每次调用能保存独立活动记录，也可不用传统机器栈实现。递归不等于必须创建 OS 线程。</p>
+<h2 id="section-7">第 7 讲：数组、对齐与浮点拓展<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>各种元素宽度的数组图、数组表达式、二维行优先、多级间接、VLA、结构体与混合参数见第 07 章。Fortran 常用列优先，C 用行优先；二维存储次序是语言/库约定，和 CPU 的大小端是两个不同维度。第三方数组库还可能使用视图和可变 stride。</p>
+<p>Windows x64 采用 LLP64，long 与 Linux LP64 不同；结构体布局同时受类型大小、ABI、编译器扩展和 packing 控制。通过 <code>sizeof/offsetof/_Alignof</code> 核验，比从操作系统名字猜全部偏移可靠。</p>
+<p>SIMD 是一条指令对多个数据元素做同类运算；标量 XMM 指令不因寄存器宽 128 位就自动处理四个 float。浮点地址仍由通用寄存器形成，数值计算在浮点寄存器进行。</p>
+<h2 id="section-8">指定教材作业：题号与应掌握的方法<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>讲次</th>
+<th>题号</th>
+<th>方法目标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>2.59、2.60、2.71</td>
+<td>字节掩码组合、指定字节替换、符号扩展与移位</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2.86、2.87、2.89</td>
+<td>不同浮点格式、边界值、表达式恒等性</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3.58、3.59</td>
+<td>算逻数据流还原、双倍宽乘法</td>
+</tr>
+<tr>
+<td>5</td>
+<td>3.60、3.63</td>
+<td>循环掩码、switch 跳转表与穿透</td>
+</tr>
+<tr>
+<td>6</td>
+<td>并入第 7 讲</td>
+<td>过程调用规则</td>
+</tr>
+<tr>
+<td>7</td>
+<td>3.66、3.67、3.68</td>
+<td>数组维度、聚合类型传参/返回、结构布局反推</td>
+</tr>
+</tbody>
+</table></div>
+<p>只列题号与方法，不复刻教材完整题文。不同版次/国际版的题号可能不一致，作者官网也专门提醒国际版习题存在差异。以本地中文版作业单指定页面和题文为准。</p>
+<h2 id="section-9">最后一次边界检查清单<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>int/long/指针的宽度是否写清？普通 char 是否有符号？</li>
+<li>小整数是否先提升？signed 与 unsigned 是否发生类型变化？</li>
+<li>是否遇到 TMin、全 1、零、移位 0 或位宽、除以 -1？</li>
+<li>浮点是否为 ±0、非规格化、∞、NaN、恰好中点、舍入进位？</li>
+<li>汇编目的寄存器宽度是否匹配？32 位写是否清高位？</li>
+<li>条件码是否已被中途改写？分支 signed/unsigned 是否选择正确？</li>
+<li>地址与内存值是否分开？相对位移是否加到下一条指令？</li>
+<li>返回地址、对齐、保存寄存器、递归深度是否逐条跟踪？</li>
+<li>数组退化、函数形参、sizeof 不求值、VLA 是否区分？</li>
+<li>结构体内部与末尾 padding、union 共享存储是否都算了？</li>
+<li>旧题是否切换 IA-32/Y86-32？修改后的机器是否仍能套原公式？</li>
+</ul>
+<div class="pager"><a href="12-past-papers.html">上一章<br>12 · 往年题导航与勘误</a><a href="14-coverage.html">下一章<br>14 · 课件覆盖索引与来源</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">第 2 讲：表示与整数</a><a href="#section-2">第 3 讲：浮点的术语与设计</a><a href="#section-3">两个事故案例及应当学到什么</a><a href="#section-4">第 4 讲：硬件与指令拓展</a><a href="#section-5">第 5 讲：控制流拓展</a><a href="#section-6">第 6 讲：ABI 与递归拓展</a><a href="#section-7">第 7 讲：数组、对齐与浮点拓展</a><a href="#section-8">指定教材作业：题号与应掌握的方法</a><a href="#section-9">最后一次边界检查清单</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

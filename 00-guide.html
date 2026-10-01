@@ -1,0 +1,60 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>复习范围与使用说明 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a aria-current=page href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>复习范围与使用说明</h1>
+<p>这份手册以 <strong>2026 年北京大学 ICS 本地课件和小班研讨题</strong>为主线，补充 CS:APP 第 3 版与公开往年题。既整理常考方法，也保留术语、历史背景、特殊边界和研讨拓展。默认平台是 <strong>x86-64、Linux、System V AMD64 ABI、AT&amp;T 汇编</strong>；其他平台会明确说明。</p>
+<h2 id="section-1">先确认：这次考什么<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>本地 <code>ICS01-overview-20260907.pdf</code> <strong>第 9 页</strong>安排：2026-10-12 第一次阶段测验，范围为 <strong>第 1～8 课</strong>。同页注明教学安排可能调整，最终以教师通知为准。现有文件只到第 7 讲；第 8 讲“Machine Prog: Advanced”暂用教材第 3 章相关部分及 2025 第一次阶段测验补齐，尚不能声称覆盖未提供的课件全部细节。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>阅读部分</th>
+<th>范围</th>
+<th>资料状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01～08 主线</td>
+<td>概述、整数、浮点、汇编基础、控制、过程、数据、机器级进阶</td>
+<td>01～07 有本地课件；08 是补充</td>
+</tr>
+<tr>
+<td>09～11 旧期中扩展</td>
+<td>处理器、优化、存储器层次与缓存</td>
+<td>旧卷常见，本次阶段测验范围之外</td>
+</tr>
+<tr>
+<td>12 真题与勘误</td>
+<td>2025 阶段卷逐题导航、2012～2024 旧卷分类、答案辨析</td>
+<td>公开仓库来源，区分浏览与细读</td>
+</tr>
+<tr>
+<td>13 小班与边角知识</td>
+<td>研讨拓展、教材作业题号、易遗漏概念</td>
+<td>覆盖现有第 2～7 讲研讨主题</td>
+</tr>
+<tr>
+<td>14 覆盖索引</td>
+<td>课件逐页主题清单、来源、核对边界</td>
+<td>用于查漏，不等于每页逐字复刻</td>
+</tr>
+</tbody>
+</table></div>
+<p>**完整性的边界：**本手册不是只列“重点”的速记表，但也不复制课件、教材或试卷全文。每种知识类型配有解释与代表例子，原题中的每个不同数值、课堂口头补充和未提供的第 8 讲资料不可能凭空补齐。历史试卷范围随年份变化，例如 2012 期中还出现链接内容，不应据此扩大 2026 第一次阶段测验范围。</p>
+<h2 id="section-2">读题前的四项约定<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<ol>
+<li><strong>先写位宽与类型。</strong><code>int</code> 和 <code>long</code>、无符号和有符号、C 表达式和机器指令的规则不同。</li>
+<li>**先区分值、位模式与字节顺序。**数值转换改变表示；按位重解释保留位串；大小端只规定多字节对象的字节排列。</li>
+<li>**机器级模型与 C 标准分开。**补码加法器会截断，但 C 有符号溢出不是可移植的“自动回绕”；负有符号数右移在本课程环境按算术右移分析。</li>
+<li>**先读题设再套模板。**流水线、浮点格式、缓存策略经常被题目修改。修改后的机器以题设为准。</li>
+</ol>
+<h2 id="section-3">建议的复习顺序<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<p>第一遍依次读 02～08，遇到公式手工算一个例子；第二遍做 2025 第一次阶段测验，按第 12 章回查弱项；第三遍用第 13、14 章查遗漏。若确实准备旧式期中，再学习 09～11，最后做近年旧期中卷。</p>
+<p>掌握的标准不是“看着懂”：应当能在不看答案的情况下，写出浮点编码推导、跟踪每条汇编的数据流、画出一次调用的栈变化，并说明所有类型与边界假设。</p>
+<h2 id="section-4">来源与版本<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<p>整理日期：2026-10-01。课程 PDF 保留在项目的 <code>ICS/</code> 目录；公开参考资料保留在本地 <code>research/</code>，<strong>发布目录只包含原创整理和来源链接，不包含扫描教材、课件原件和试卷副本</strong>。</p>
+<ul>
+<li><a href="https://github.com/zhuozhiyongde/Introduction-to-Computer-System-2023Fall-PKU">指定参考仓库</a></li>
+<li><a href="https://csapp.cs.cmu.edu/3e/errata.html">CS:APP 作者维护的勘误</a></li>
+<li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 指令与体系结构手册</a></li>
+</ul>
+<p>本地课件页码均指 PDF 的物理页序；教材题号以用户提供的中文版第 3 版、小班作业单为准。</p>
+<div class="pager"><span></span><a href="01-overview.html">下一章<br>01 · 系统概述与基本模型</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">先确认：这次考什么</a><a href="#section-2">读题前的四项约定</a><a href="#section-3">建议的复习顺序</a><a href="#section-4">来源与版本</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

@@ -1,0 +1,39 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>01 · 系统概述与基本模型 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a aria-current=page href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>01 · 系统概述与基本模型</h1>
+<p>来源：第 1 讲课件 pp.16～42；第 4 讲 pp.12～24；教材第 1 章。第 1 讲的课程历史、组织与成绩说明列于文末，以免与技术内容混淆。</p>
+<h2 id="section-1">信息就是位加上解释<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>同一串比特可以解释为整数、浮点数、字符、地址或指令。例如 <code>0x3F800000</code> 按 IEEE binary32 是 1.0，按无符号整数是 1065353216。机器不会凭位串自动知道程序员“本来想要”的类型；指令、数据布局和语言规则共同决定意义。</p>
+<p>源文件通常是文本，字符用编码表示；机器代码、目标文件和可执行文件含二进制结构。ASCII 数字 <code>'0'</code> 是 0x30，并非整数 0。字符串结尾的 <code>\0</code> 是零字节，不等于字符 <code>'0'</code>。</p>
+<h2 id="section-2">从 C 到执行<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<pre><code class="language-text">源代码 .c → 预处理 .i → 编译 .s → 汇编 .o → 链接 可执行文件
+           宏/头文件     汇编文本     机器码     符号解析/重定位
+</code></pre>
+<ul>
+<li>预处理展开 <code>#include</code>、宏和条件编译；编译进行语法与类型检查、优化并生成汇编。</li>
+<li>汇编器把指令编码为字节，目标文件还含符号、节、重定位记录，通常不能直接运行。</li>
+<li>链接器合并目标文件与库，解析跨文件的符号引用并调整地址。加载与链接是不同步骤。</li>
+<li>操作系统装入程序并建立进程的执行环境；处理器执行机器指令。</li>
+<li><code>gcc -E</code> 看预处理，<code>gcc -Og -S</code> 生成汇编，<code>gcc -c</code> 生成目标文件，<code>objdump -d</code> 反汇编。不同编译器版本和优化级别可能产生不同但等价的代码。</li>
+<li>反汇编的一行通常包含：指令地址、机器码字节、助记符、操作数；标签和调试信息不是每条机器指令必须包含的内容。</li>
+</ul>
+<h2 id="section-3">处理器与内存<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<p>CPU 中，程序计数器 PC（x86-64 为 <code>%rip</code>）指向执行位置，寄存器保存临时数据，ALU 完成算术和逻辑运算，条件码记录部分结果性质。内存是按字节寻址的存储空间，程序通过地址访问数据。总线传递地址、数据和控制信号。</p>
+<p>以 <code>addq %rdx,(%rcx)</code> 为例：取指并译码 → 读 <code>%rcx</code> 得到地址 → 读该地址的 8 字节 → 读 <code>%rdx</code> → ALU 做 64 位加法 → 把低 64 位写回内存 → 更新条件码。额外的进位由 CF 记录，不会自动多写第 9 字节。此处描述的是体系结构语义，不规定现代 CPU 内部必须按这些步骤串行实现。</p>
+<p>**ISA 与微体系结构：**ISA 规定软件可见的指令、寄存器、编码和行为；微体系结构决定流水线、执行单元、预测与缓存如何实现这些行为。不同 CPU 可以实现同一个 ISA。</p>
+<h2 id="section-4">五个贯穿全课的问题<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<p>|问题|具体后果|
+|机器整数不是数学整数|固定位宽会丢失高位；类型转换改变比较结果|
+|浮点不是实数|0.1 可能无法精确表示；结合律、分配律可能失效|
+|必须理解机器代码|定位性能瓶颈、调试、理解栈和调用、识别内存错误|
+|内存影响正确性与性能|越界、悬空指针、内存泄漏；访问局部性改变速度|
+|渐近复杂度不等于运行时间|相同 O(n²) 算法因访问顺序、常数、缓存而不同|</p>
+<p>C 的数组越界会造成未定义行为，不保证“恰好改坏紧邻的变量”。课件用结构体中的越界写演示浮点变量被破坏，是具体机器布局下的后果，不是可靠的语言语义。</p>
+<h2 id="section-5">层次、抽象与性能<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<p>寄存器 → L1/L2/L3 缓存 → 主存 → 本地持久存储 → 远程存储，通常越向后容量越大、每字节成本越低、访问越慢。时间局部性是近期用过的内容可能再次使用，空间局部性是附近内容可能很快使用。C 的行优先矩阵按行访问通常比按列访问具有更好的空间局部性。</p>
+<p>操作系统提供进程、虚拟内存、文件等抽象：进程是正在运行的程序及其状态；虚拟内存提供每个进程看到的地址空间；文件把多种 I/O 对象表现为字节序列。网络使程序还需要处理消息、延迟、协议和并发。</p>
+<p>并发表示多个任务的执行在时间上重叠；并行表示同一时刻实际执行多个操作。可通过多核、指令级并行、SIMD 等层次实现并行。不能把“多线程”直接等同于“更快”。</p>
+<p>Amdahl 定律：若原时间中比例 α 的部分加速 k 倍，总加速比为 <code>1 / ((1-α)+α/k)</code>。α=0.8、k=4 时总加速比是 2.5；即使 k 无穷大，上限也只有 5。</p>
+<h2 id="section-6">不属于计算题但课件出现的内容<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>课程源于 CMU 从程序员视角理解系统的教学路线；北大采用大班与小班研讨结合。课件列出 Data、Bomb、Attack、Arch、Cache、Shell、Malloc、Proxy 等实验及其对应主题。课程组织、实验节点与成绩构成是教学安排，复习时查当前课件和通知，不从历史仓库推断今年政策。第 1 讲技术部分之外的页码均在覆盖索引保留。</p>
+<h2 id="section-7">自检<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>能否分别说明编译、汇编、链接与加载做什么？为什么更高主频不能单独保证更快？为什么两个相同复杂度的矩阵遍历会有性能差异？为什么地址相同的位串能有完全不同的解释？</p>
+<div class="pager"><a href="00-guide.html">上一章<br>复习范围与使用说明</a><a href="02-integers.html">下一章<br>02 · 位、字节与整数</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">信息就是位加上解释</a><a href="#section-2">从 C 到执行</a><a href="#section-3">处理器与内存</a><a href="#section-4">五个贯穿全课的问题</a><a href="#section-5">层次、抽象与性能</a><a href="#section-6">不属于计算题但课件出现的内容</a><a href="#section-7">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

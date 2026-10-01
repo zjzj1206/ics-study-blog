@@ -1,0 +1,170 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>03 · 浮点表示、舍入与运算 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a aria-current=page href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>03 · 浮点表示、舍入与运算</h1>
+<p>来源：第 3 讲 pp.3～48；小班第 3 讲；教材 §2.4；2022、2023、2024 期中第二大题以及 2025 阶段卷第 4～6 题。</p>
+<h2 id="section-1">二进制小数与定点<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p><code>1011.101₂ = 8+2+1+1/2+1/8 = 11.625</code>。有限二进制小数的最简分母只能含因子 2，所以 1/10 不能精确有限表示；1/8 可以。定点预先固定小数点位置，硬件和舍入容易控制、等间距，但固定总位数下动态范围有限。浮点通过指数移动小数点，范围大但间距不均匀。</p>
+<h2 id="section-2">通用 IEEE 风格公式<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<p>设符号位 s，阶码字段 e 共 k 位，小数字段 f 共 n 位，<code>Bias=2^(k-1)-1</code>，<code>p=n+1</code> 为规格化有效位精度。字段 f 是整数；公式中的 <code>f/2^n</code> 才是二进制小数。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>阶码条件</th>
+<th>M</th>
+<th>E</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规格化</td>
+<td>0 &lt; e &lt; 2ᵏ-1</td>
+<td>1+f/2ⁿ</td>
+<td>e-Bias</td>
+<td>(-1)ˢ·M·2ᴱ</td>
+</tr>
+<tr>
+<td>非规格化</td>
+<td>e=0 且 f≠0</td>
+<td>f/2ⁿ</td>
+<td>1-Bias</td>
+<td>(-1)ˢ·M·2ᴱ</td>
+</tr>
+<tr>
+<td>有符号零</td>
+<td>e=0 且 f=0</td>
+<td>0</td>
+<td>1-Bias</td>
+<td>+0 或 -0</td>
+</tr>
+<tr>
+<td>无穷</td>
+<td>e=2ᵏ-1 且 f=0</td>
+<td>—</td>
+<td>—</td>
+<td>+∞ 或 -∞</td>
+</tr>
+<tr>
+<td>NaN</td>
+<td>e=2ᵏ-1 且 f≠0</td>
+<td>—</td>
+<td>—</td>
+<td>非数</td>
+</tr>
+</tbody>
+</table></div>
+<p>非规格化数没有隐含的 1，但指数用 <strong>1-Bias</strong>，不是 -Bias。这让最大非规格化数与最小正规格化数之间恰好仍差一个最小非规格化单位，实现渐进下溢。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>格式</th>
+<th>s/k/n</th>
+<th>精度 p</th>
+<th>Bias</th>
+<th>最小正非规格化</th>
+<th>最小正规格化</th>
+<th>最大有限值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>binary32</td>
+<td>1/8/23</td>
+<td>24</td>
+<td>127</td>
+<td>2⁻¹⁴⁹</td>
+<td>2⁻¹²⁶</td>
+<td>(2-2⁻²³)·2¹²⁷</td>
+</tr>
+<tr>
+<td>binary64</td>
+<td>1/11/52</td>
+<td>53</td>
+<td>1023</td>
+<td>2⁻¹⁰⁷⁴</td>
+<td>2⁻¹⁰²²</td>
+<td>(2-2⁻⁵²)·2¹⁰²³</td>
+</tr>
+</tbody>
+</table></div>
+<p>单精度最大约 3.40×10³⁸，最小正规格化约 1.18×10⁻³⁸，有效十进制数字约 7 位；双精度最大约 1.80×10³⁰⁸，最小正规格化约 2.23×10⁻³⁰⁸，有效数字约 16 位。有效数字是精度概念，不是小数点后固定的位数。</p>
+<h2 id="section-3">范围、间距与计数<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<pre><code class="language-text">最小正非规格化 = 2^(1-Bias-n)
+最大正非规格化 = (1-2^-n)·2^(1-Bias)
+最小正规格化   = 2^(1-Bias)
+最大正有限值   = (2-2^-n)·2^((2^k-2)-Bias)
+</code></pre>
+<p>规格化 binade <code>[2^E,2^(E+1))</code> 内相邻数间距为 <code>2^(E-n)</code>；非规格化区域等间距。越接近大数，绝对精度越粗。1 后面的间距是 2⁻ⁿ，最近偶数舍入的常见相对误差界为 2⁻ᵖ（规格化且无溢出等条件下）。1 前面的间距比 1 后面小一半，不能跨边界机械套同一个 ULP。</p>
+<p>精度 p 的格式能连续精确表示从 -2ᵖ 到 2ᵖ 的整数（还需指数范围足够），<strong>不意味着 2ᵖ 是可精确表示的最大整数</strong>。更大的 2 的幂仍可精确表示。</p>
+<p>固定符号时 NaN 编码数为 <code>2^n-1</code>，两种符号共 <code>2(2^n-1)</code>。有限位模式数是 <code>2(2^k-1)2^n</code>；若把 +0/-0 视为同一个实数，互异有限实数个数再减 1。增加阶码位、减少小数位，会改变范围、精度和特殊编码数，不仅仅是“同样多的实数换个分布”。</p>
+<p>“最大负非规格化”按数值顺序是最接近 0 的负数；“最小负非规格化”是绝对值最大的负非规格化数。必须区别于“最大绝对值”。</p>
+<h2 id="section-4">编码与解码：完整步骤<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<p>编码 -13.25：绝对值为 <code>1101.01₂=1.10101₂×2³</code>；s=1，e=3+127=130=<code>10000010₂</code>，f=<code>1010100...0</code>（补到 23 位）。最终 binary32 为 <strong>0xC1540000</strong>。小端内存字节是 <code>00 00 54 C1</code>。</p>
+<p>解码 0x40400000：s=0，e=128，f/2²³=0.5，所以 M=1.5、E=1，值为 3。解码时先分字段和分类，再决定隐藏位；不要一律补 1。</p>
+<p>自定义 1/3/4 格式：Bias=3，0xBD 的 s=1、e=3、f=13，因此值为 <code>-(1+13/16)·2^0=-1.8125</code>；9/64 是非规格化，单位是 2⁻⁶，f=9，编码 0x09。题目给实数 1 的编码可反推 Bias、指数宽度和小数宽度。</p>
+<h2 id="section-5">最近偶数舍入<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<p>先比较被丢弃部分与半个间隔；小于半间隔舍去，大于则进位；<strong>恰好一半</strong>时，选保留后最低位为 0 的结果。“向偶数”不是总舍入到偶数整数。</p>
+<p>保留三位二进制小数：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>原数</th>
+<th>保留部分</th>
+<th>舍弃部分</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>101.100011</td>
+<td>101.100</td>
+<td>011，小于一半</td>
+<td>101.100</td>
+</tr>
+<tr>
+<td>101.100101</td>
+<td>101.100</td>
+<td>101，大于一半</td>
+<td>101.101</td>
+</tr>
+<tr>
+<td>101.100100</td>
+<td>101.100</td>
+<td>100，恰好一半，最低位 0</td>
+<td>101.100</td>
+</tr>
+<tr>
+<td>101.111100</td>
+<td>101.111</td>
+<td>100，恰好一半，最低位 1</td>
+<td>110.000</td>
+</tr>
+</tbody>
+</table></div>
+<p>工程判定：guard 为第一舍弃位，sticky 为其后各位的或，lsb 为最后保留位；最近偶数的进位条件是 <code>guard &amp;&amp; (sticky || lsb)</code>。进位可能导致有效数溢出，必须重新规格化。</p>
+<p>其他模式：向零、向 +∞、向 -∞。对负数，“向下”是更负而不是靠近 0。默认近偶数减少反复遇到中点时持续单向偏差，但不能说任意数据集都无偏。</p>
+<h2 id="section-6">加法、乘法与异常<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>加法：比较指数 → 小指数有效数右移对阶并保留舍入信息 → 带符号相加/相减 → 规格化 → 舍入 → 检查上溢、下溢、零。相近数相减可能发生严重消去，使已有的相对误差变大。</p>
+<p>乘法：符号异或 → 指数相加 → 有效数相乘 → 规格化 → 舍入 → 范围检查。不要把指数<strong>字段</strong>直接相加后忘记减 Bias；字段编码不是实际 E。</p>
+<p>IEEE 默认模式下超出有限范围可能得到无穷，下溢可能得到非规格化或零。浮点状态还包括无效、除零、上溢、下溢、不精确等异常标志；它们不同于程序必须立即抛出异常或终止。</p>
+<h2 id="section-7">零、无穷与 NaN<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>+0 与 -0 比较相等，但符号可由 <code>signbit</code> 或某些运算体现；IEEE 非陷阱语义下 <code>1/+0=+∞</code>、<code>1/-0=-∞</code>。∞-∞、0×∞、0/0 会得到 NaN。NaN 与任何数（包括自己）的 <code>== &lt; &lt;= &gt; &gt;=</code> 都是假，<code>!=</code> 为真。</p>
+<p>NaN 有多个有效载荷编码，可区分 quiet/signaling NaN，并携带诊断信息；具体传播与载荷保留规则依实现，不能把 payload 当通用稳定错误码。符号位也存在，但 NaN 不形成普通的数值正负顺序。</p>
+<p>对<strong>非负有限数</strong>，IEEE 位串按无符号比较与数值顺序一致；负数顺序反向，有符号零与 NaN 又需要特殊处理，所以不能对所有 float 直接按 int 比较。</p>
+<h2 id="section-8">代数性质与 C 转换<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<p>浮点加法和乘法通常可交换，但结合律、分配律不普遍成立；NaN、无穷、有符号零还会影响等式和特殊情形。在固定舍入模式、排除 NaN 的普通数值排序中，正确舍入加法保持弱单调性；精度损失会破坏<strong>严格</strong>单调性（可能相等），不能把它误说成一定反转大小。乘以非负常数才保持方向，负数会反向，0×∞ 会产生 NaN。</p>
+<ul>
+<li>32 位 int → double 精确，因为 53 位有效精度足够。</li>
+<li>int → float 可能舍入，32 位 int 的范围不致使 binary32 溢出。</li>
+<li>float → double 对有限值精确；double → float 可能舍入、上溢和下溢。</li>
+<li>浮点 → 整数向零截断；NaN、无穷或截断后超出目标范围，不能依赖可移植 C 给某个固定整数。</li>
+<li><code>(float)(double)x == (float)x</code> 对 32 位 int x 成立；整数先精确进入 double。</li>
+<li>三个 32 位整数转 double 后相加，中间精确和仍远小于 53 位精度极限，所以该特定域内加法结合律成立；这不证明任意 double 的结合律成立。</li>
+<li>三个整数转 double 后相乘可能超过精度，结合律不保证成立；<code>dx/dx == dz/dz</code> 在某个原整数为零时可能失败。</li>
+</ul>
+<p>例：binary32 中 <code>(16777216.0f+1.0f)-16777216.0f</code> 为 0，因为 2²⁴ 之后间距为 2，加 1 恰在中点，舍到偶数有效数。真实数学结果为 1。</p>
+<h2 id="section-9">FP8 与低精度格式：按题设定义<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<p>2023 期中使用 E5M2 与一种 E4M3：E5M2 可按 1/5/2 的 IEEE 风格计算，Bias=15，最大有限值 57344；题设 E4M3 保留指数、小数全 1 为 NaN、其余扩展有限范围，最大值为 448。不能把该 E4M3 的全 1 指数一律判成无穷。</p>
+<p>FP16（1/5/10）、BF16（1/8/7）展示范围和精度的权衡；BF16 指数范围接近 FP32，精度较低。训练/推理中可使用混合精度和高精度累加，但不能从存储格式推定累加也用相同格式。这里解释格式原理，不以某一年的硬件支持列表代替考题约定。</p>
+<h2 id="section-10">自检<a class="anchor" href="#section-10" aria-label="链接到本节">#</a></h2>
+<p>任选 k、n，能推导四个边界、相邻间距、NaN 数量和两种零；能把十六进制编码和内存字节分开；能处理跨规格化边界的舍入；能用输入范围证明某个表达式成立，而不是只背“浮点不满足结合律”。教材作业 2.86、2.87、2.89。</p>
+<div class="pager"><a href="02-integers.html">上一章<br>02 · 位、字节与整数</a><a href="04-assembly-basics.html">下一章<br>04 · 机器级编程基础</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">二进制小数与定点</a><a href="#section-2">通用 IEEE 风格公式</a><a href="#section-3">范围、间距与计数</a><a href="#section-4">编码与解码：完整步骤</a><a href="#section-5">最近偶数舍入</a><a href="#section-6">加法、乘法与异常</a><a href="#section-7">零、无穷与 NaN</a><a href="#section-8">代数性质与 C 转换</a><a href="#section-9">FP8 与低精度格式：按题设定义</a><a href="#section-10">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>
