@@ -1,0 +1,130 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>06 · 过程调用、栈与 ABI · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="/">项目总览</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a aria-current=page href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>06 · 过程调用、栈与 ABI</h1>
+<p>来源：第 6 讲 pp.4～75；小班第 6 讲；教材 §3.7；2025 阶段卷第 15～17 题。</p>
+<h2 id="section-1">调用要完成三件事<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p><strong>传递控制</strong>：保存返回位置并进入被调用者；<strong>传递数据</strong>：参数、返回值；<strong>管理存储</strong>：局部变量、跨调用保存值、栈帧分配与回收。ABI（应用二进制接口）规定不同编译模块如何在二进制层面配合，包括调用约定、类型大小/对齐、寄存器保存、对象文件与链接等。</p>
+<p>call/ret 的硬件行为来自 ISA；“第一个参数放 rdi”是 ABI 约定，不是 call 指令固有的强制功能。改变约定需要调用者、被调用者、库、编译器和调试/展开信息协同。</p>
+<h2 id="section-2">栈的方向与四条指令<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<p>栈向低地址增长，rsp 指向当前栈顶。普通 64 位 push/pop 每次改变 8 字节。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>指令</th>
+<th>主要语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pushq S</code></td>
+<td>先取得源值，rsp←rsp-8，把值写到新栈顶</td>
+</tr>
+<tr>
+<td><code>popq D</code></td>
+<td>读旧栈顶，rsp←rsp+8，把取出的值写到 D</td>
+</tr>
+<tr>
+<td><code>call target</code></td>
+<td>压入下一条指令的地址，再把 RIP 转到 target</td>
+</tr>
+<tr>
+<td><code>ret</code></td>
+<td>从栈顶取返回地址到 RIP，rsp 增加 8</td>
+</tr>
+</tbody>
+</table></div>
+<p>对 <code>pushq %rsp</code>、<code>popq %rsp</code> 之类特殊目的/源不能仅按普通寄存器例子机械替换：push 压入的是原 rsp；pop 到 rsp 时最终 rsp 取栈中弹出的值。内存目的含 rsp 时也需要按指令规定的求址时序分析。</p>
+<p>pop 不会主动清零旧内存，只是移走栈顶。栈帧没有 C 层面可持久引用的寿命，返回后使用局部变量地址无效，即使原字节暂时还在。</p>
+<h2 id="section-3">一次调用的地址跟踪<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<p>假设地址 0x400644 的 call 长 5 字节，执行前 rsp=0x110。执行后 rsp=0x108，<code>M8[0x108]=0x400649</code>，RIP 为目标函数入口。目标的 ret 执行后 rsp=0x110，RIP=0x400649。</p>
+<p>小端展开返回地址 0x400649 的 8 字节是 <code>49 06 40 00 00 00 00 00</code>。返回地址不是 call 自身地址，也不是目标函数地址。若题目列出若干 push/sub，逐条累计后再确定偏移。</p>
+<h2 id="section-4">System V AMD64 参数与返回值<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>规则（普通标量参数）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前 6 个整数/指针参数</td>
+<td>rdi、rsi、rdx、rcx、r8、r9</td>
+</tr>
+<tr>
+<td>更多整数/指针参数</td>
+<td>经栈传递；callee 入口的第 7 个普通整数参数通常位于 8(%rsp)</td>
+</tr>
+<tr>
+<td>普通整数/指针返回值</td>
+<td>rax（较小类型使用其低部分）</td>
+</tr>
+<tr>
+<td>浮点参数</td>
+<td>xmm0～xmm7，按浮点参数序列分配</td>
+</tr>
+<tr>
+<td>float/double 返回值</td>
+<td>xmm0</td>
+</tr>
+<tr>
+<td>调用前栈对齐</td>
+<td>常见规则为 call 执行前 rsp 为 16 的倍数；入口 rsp+8 为 16 的倍数</td>
+</tr>
+</tbody>
+</table></div>
+<p>参数类型与布局还可能要求更强的对齐；聚合类型按 ABI 分类，不适用“一切前六个都按一个整数参数算”。整数与浮点有各自的分配序列，例如 <code>f(long a,double b,long c,float d)</code> 分别在 rdi、xmm0、rsi、xmm1。</p>
+<h2 id="section-5">caller-saved / callee-saved<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>通用寄存器</th>
+<th>责任</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>被调用者保存</td>
+<td>rbx、rbp、r12～r15</td>
+<td>callee 若修改，返回前恢复</td>
+</tr>
+<tr>
+<td>调用者保存</td>
+<td>rax、rcx、rdx、rsi、rdi、r8～r11</td>
+<td>caller 若需调用后继续使用旧值，自行保存</td>
+</tr>
+<tr>
+<td>栈指针</td>
+<td>rsp</td>
+<td>按调用约定恢复栈结构，不当普通临时值使用</td>
+</tr>
+</tbody>
+</table></div>
+<p>System V 下 XMM 通常为调用者保存。没有要求“每个函数必须把所有寄存器都保存一次”；只保存实际需要维护的值。rbp 可作帧指针，也可以在省略帧指针时当普通的 callee-saved 寄存器。</p>
+<p>例如第三个参数 dest 在 rdx，而调用另一个函数可能破坏 rdx：可以先 push rbx 保存调用者的旧 rbx，再把 dest 放 rbx，call 后经 rbx 写回结果，最后 pop 恢复。<strong>callee-saved 不表示值永不变化，而是跨调用边界的约定值能保持。</strong></p>
+<h2 id="section-6">栈帧与局部存储<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>常见传统序言和尾声：</p>
+<pre><code class="language-asm">pushq %rbp
+movq %rsp, %rbp
+subq $32, %rsp          # 局部区/对齐
+# 局部对象在 rbp 的负偏移，返回地址通常在 8(%rbp)
+leave                  # mov rbp,rsp; pop rbp 的效果
+ret
+</code></pre>
+<p>不是所有函数都有该形式。叶函数可能完全不分配栈；System V 用户态允许使用 rsp 以下的 128 字节 red zone，适合不跨调用保存的临时数据。内核、Windows 等环境不可直接套用。动态长度数组或 alloca 可能需要运行时计算栈空间并对齐。</p>
+<p>局部量放内存的常见原因：取地址、数组/结构体存储、寄存器不足、跨调用保留。优化可能消除对象或传播常量，因此源代码变量与栈槽不存在永远一一对应关系。</p>
+<h2 id="section-7">递归：每一层有什么不同<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<p>每个递归调用都有自身返回地址与需要保留的局部状态。硬件不需要“递归专用指令”，普通 call/ret、栈与编译器约定已经足够。递归深度、总调用次数和同时存活的帧数不同。</p>
+<pre><code class="language-c">unsigned long count(unsigned long x) {
+    if (x == 0) return 0;
+    return (x &amp; 1) + count(x &gt;&gt; 1);
+}
+</code></pre>
+<p>当前层的 <code>x&amp;1</code> 必须在递归调用之后仍可获得：可放 callee-saved 寄存器或栈。返回时再加到子调用的返回值。若最高 1 位在第 k 位（0 起算），不优化时非零层有 k+1 层，再加 x=0 的基例层；按是否计基例说明答案。</p>
+<p>带两个递归子调用的组合数程序总调用次数可能很大，但栈同时只保存一条尚未返回的路径。尾调用若被优化为跳转，帧数又可能变化；考试按给定汇编追踪。</p>
+<h2 id="section-8">聚合类型传参与返回<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<p>小结构体可能按一个或两个 eightbyte 分类到整数寄存器或 XMM；大的或被分类为 MEMORY 的返回对象通常由 caller 提供缓冲区地址作为隐藏参数。常见 MEMORY 返回约定：调用时目标地址在 rdi，返回时 rax 也给出该地址；显式整数参数位置相应后移。<strong>不是所有结构体返回都使用隐藏指针。</strong> 这也是 2024 期中选择题第 7 题发生歧义的原因。</p>
+<h2 id="section-9">ABI 对比（小班拓展）<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<p>Windows x64 普通整数参数主要使用 rcx、rdx、r8、r9；前四个位置对应浮点参数使用相应 XMM 槽位，caller 预留 32 字节 shadow space。其保存寄存器和 System V 不同，不能把 Linux 表直接套用。IA-32 常见 cdecl 主要栈传参、eax 返回，caller 清理参数；stdcall/fastcall 等又有差异，“32 位 Windows/Linux 只存在一个约定”不成立。详见 <a href="https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170">Microsoft x64 调用约定</a>。</p>
+<h2 id="section-10">自检<a class="anchor" href="#section-10" aria-label="链接到本节">#</a></h2>
+<p>能逐条画出 call/push/pop/ret 前后的 rsp、返回地址和数据；能识别每个参数；能解释为什么用 rbx 保留指针；能区分栈帧数量与调用次数；能说明某个变量是否需要有地址。第 6 讲作业合并到第 7 讲。</p>
+<div class="pager"><a href="05-control.html">上一章<br>05 · 条件码、分支、循环与 switch</a><a href="07-data.html">下一章<br>07 · 数组、结构体、指针与浮点汇编</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">调用要完成三件事</a><a href="#section-2">栈的方向与四条指令</a><a href="#section-3">一次调用的地址跟踪</a><a href="#section-4">System V AMD64 参数与返回值</a><a href="#section-5">caller-saved / callee-saved</a><a href="#section-6">栈帧与局部存储</a><a href="#section-7">递归：每一层有什么不同</a><a href="#section-8">聚合类型传参与返回</a><a href="#section-9">ABI 对比（小班拓展）</a><a href="#section-10">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>

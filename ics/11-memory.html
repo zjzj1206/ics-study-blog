@@ -1,0 +1,155 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>11 · 旧期中扩展：存储器与缓存 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="/">项目总览</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a aria-current=page href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>11 · 旧期中扩展：存储器与缓存</h1>
+<p>对应教材第 6 章；旧期中缓存大题与选择题。<strong>不属于日程所示第一次阶段测验范围</strong>。</p>
+<h2 id="section-1">存储技术与组织<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
+<p>SRAM 用双稳态电路保持状态，通常更快、更贵、密度低，用于缓存；DRAM 以电容电荷存储，需要刷新，密度高，用于主存。二者通常断电丢失数据。ROM/PROM/EPROM/EEPROM/Flash 是非易失类别，写入/擦除特性不同，不能因有“RAM”或“ROM”名字就推断所有访问规则。</p>
+<p>DRAM 以行列组织，RAS 选行装入行缓冲，CAS 选列；复用地址引脚降低引脚需求。同一行连续访问可以复用行缓冲。FPM 是快页模式，EDO 延长数据输出有效时间并重叠后续访问，SDRAM 与时钟同步，DDR 在时钟两边沿传输。宽度、频率、通道数和有效传输率共同影响带宽。</p>
+<p>SSD 的 NAND Flash 按页读写、按更大块擦除，需要地址映射、垃圾回收和磨损均衡；随机读延迟低于旋转盘，但写放大和擦写寿命等不能忽略。磁盘也会机械磨损，不能说“只有 SSD 会磨损”。</p>
+<h2 id="section-2">磁盘容量与时间<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
+<p>容量 = 盘片数×每片有效面数×每面磁道数×每道扇区数×每扇区字节数。实际分区记录使不同 zone 的扇区数可不同，应按题设求和或平均。GB 通常按 10⁹，GiB 按 2³⁰。</p>
+<pre><code class="language-text">每转时间 = 60/RPM 秒 = 60000/RPM 毫秒
+平均旋转延迟 = 半转 = 30000/RPM 毫秒
+传送一扇区时间 = 每转时间/每道扇区数
+访问时间 ≈ 寻道 + 旋转延迟 + 传送 (+ 题设控制器开销)
+</code></pre>
+<p>7200 RPM 时一转约 8.333 ms，平均旋转约 4.167 ms。最短时间可能无需等待一整次平均旋转；题目给出磁头初始位置、方向和访问次序时按几何位置分析。RPM 是转/分钟，不能直接当转/秒。</p>
+<h2 id="section-3">局部性与缓存层次<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
+<p>时间局部性：重复使用最近访问的对象；空间局部性：访问邻近地址。取指本身也有局部性；即使没有数据数组，循环也可能体现指令时间/空间局部性。</p>
+<p>缓存把下层数据按块复制到上层。命中时间、失效率与失效处罚共同决定性能，命中率高不一定总时间短。块越大有利于空间局部性，但减少固定容量中块的数量、增加传送代价与污染。</p>
+<h2 id="section-4">参数与地址划分<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
+<pre><code class="language-text">S = 2^s 组；每组 E 行；每块 B = 2^b 字节
+数据容量 C = S·E·B
+m 位地址分为 tag(t=m-s-b) | set index(s) | block offset(b)
+block = address // B
+set   = block % S
+tag   = block // S
+offset= address % B
+</code></pre>
+<p>E 是相联度，不是块大小；容量 C 通常不含 tag、valid、dirty 等元数据。常规位切分要求 S、B 是 2 的幂，<strong>E 不必须是 2 的幂，t 是位数更不必是 2 的幂</strong>。直接映射 E=1；全相联 S=1；组相联介于两者之间。</p>
+<p>若题目问实际总存储位数，要加 <code>S·E·(8B+t+valid位+dirty位)</code>，再按题设计 LRU 等状态。改 E 不改变地址的 set/offset 划分；改 S 或 B 会改变划分，这是 2024 扩容题的关键。</p>
+<h2 id="section-5">一次访问的流程<a class="anchor" href="#section-5" aria-label="链接到本节">#</a></h2>
+<p>取组索引 → 在该组中检查 valid 且 tag 相等的行 → 命中则按 offset 取字节 → 未命中则找空行或按替换策略淘汰 → 装入整个对齐块 → 更新元数据。tag 相同但 valid=0 不是命中。跨块访问可能需要访问两块，不能只检查起始地址。</p>
+<p>LRU 淘汰最久未被访问的行，命中也更新新旧顺序；FIFO 按进入先后，命中不改变排队次序；随机替换另按题设。所有策略只在<strong>对应组内</strong>选牺牲行，不跨组比较年龄。</p>
+<h2 id="section-6">手工模拟完整例子<a class="anchor" href="#section-6" aria-label="链接到本节">#</a></h2>
+<p>m=5、B=4、S=2、E=2，初始空、LRU。序列：2、23、13、9、20、15、13、10。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>地址</th>
+<th>块号</th>
+<th>组</th>
+<th>tag</th>
+<th>结果</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>miss</td>
+<td>载入 M[0..3]</td>
+</tr>
+<tr>
+<td>23</td>
+<td>5</td>
+<td>1</td>
+<td>2</td>
+<td>miss</td>
+<td>载入 M[20..23]</td>
+</tr>
+<tr>
+<td>13</td>
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>miss</td>
+<td>载入 M[12..15]</td>
+</tr>
+<tr>
+<td>9</td>
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>miss</td>
+<td>载入 M[8..11]</td>
+</tr>
+<tr>
+<td>20</td>
+<td>5</td>
+<td>1</td>
+<td>2</td>
+<td>hit</td>
+<td>23 已带入该块</td>
+</tr>
+<tr>
+<td>15</td>
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>hit</td>
+<td>13 已带入该块</td>
+</tr>
+<tr>
+<td>13</td>
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>hit</td>
+<td>更新时间</td>
+</tr>
+<tr>
+<td>10</td>
+<td>2</td>
+<td>0</td>
+<td>1</td>
+<td>hit</td>
+<td>9 已带入该块</td>
+</tr>
+</tbody>
+</table></div>
+<p>总 4 次命中、4 次失效，命中率 50%。地址跨度不等于缓存次数，块内连续字节通常共享一次带入。</p>
+<h2 id="section-7">写策略是两组独立选择<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>选项</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>写命中</td>
+<td>write-through 直写</td>
+<td>同时向下一层传递写入</td>
+</tr>
+<tr>
+<td>写命中</td>
+<td>write-back 写回</td>
+<td>只改本层并置 dirty，淘汰脏块时写回</td>
+</tr>
+<tr>
+<td>写失效</td>
+<td>write-allocate 写分配</td>
+<td>把块带入再修改</td>
+</tr>
+<tr>
+<td>写失效</td>
+<td>no-write-allocate 不写分配</td>
+<td>绕过本层向下层写，不装入该块</td>
+</tr>
+</tbody>
+</table></div>
+<p>常见搭配是写回+写分配、直写+不写分配，但并非逻辑上唯一合法组合。写回不表示“所有淘汰都写”，只有脏块需要写。写失效次数与总内存传输次数不同，可能同时有脏块写回、读入新块和写入。</p>
+<h2 id="section-8">失效类型与平均访问时间<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<p>冷/强制失效：第一次访问块。冲突失效：同组映射竞争，即使总容量足够仍相互替换。容量失效：工作集太大，理想同容量全相联也装不下。并发系统还可有一致性失效，本课基本模型通常不涉及。</p>
+<p><code>AMAT = hit time + miss rate × miss penalty</code>，前提 miss penalty 是命中探测后的<strong>额外</strong>代价；如果题目给“失效总时间”，应写加权平均而不重复加命中时间。多级时 L2 局部失效率与全局失效率不同：全局 L2 miss 率通常为 L1 miss 率×L2 local miss 率。</p>
+<h2 id="section-9">数组、步长与 memory mountain<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<p>若 int 为 4 字节、B=64 字节，一个对齐块容纳 16 个 int；顺序读冷数组通常每 16 个元素一次强制失效，但行首对齐、跨块、写分配、共享缓存和冲突都可能改变结果。步长 ≥ 块大小可能每次碰新块；多个数组基址映射同组会抖动。</p>
+<p>二维数组按行内 j 递增通常空间局部性好；按列跨行步长为列数×元素宽度。分块需要让同时使用的小块工作集适合 cache，还应避免组冲突。Memory mountain 中工作集大小轴展示不同层次容量效应，步长轴展示空间局部性效应。</p>
+<p>Victim cache 保存刚被主 cache 淘汰的块，通常小而全相联，用来缓解冲突；按题设跟踪主缓存与 victim 之间的交换，不把它简单等同于扩大某一组。</p>
+<h2 id="section-10">自检<a class="anchor" href="#section-10" aria-label="链接到本节">#</a></h2>
+<p>能从 C/S/E/B 求位划分和反求地址；能按 LRU 模拟读写并统计流量；能分清写命中与写失效策略；能计算磁盘时间；能分析遍历顺序和工作集；能对题目新增“不缓存某些块”规则重新执行状态机。</p>
+<div class="pager"><a href="10-optimization.html">上一章<br>10 · 旧期中扩展：程序性能优化</a><a href="12-past-papers.html">下一章<br>12 · 往年题导航与勘误</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">存储技术与组织</a><a href="#section-2">磁盘容量与时间</a><a href="#section-3">局部性与缓存层次</a><a href="#section-4">参数与地址划分</a><a href="#section-5">一次访问的流程</a><a href="#section-6">手工模拟完整例子</a><a href="#section-7">写策略是两组独立选择</a><a href="#section-8">失效类型与平均访问时间</a><a href="#section-9">数组、步长与 memory mountain</a><a href="#section-10">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>
