@@ -1,0 +1,8 @@
+{
+  "site": "https://blog.zjzj.work/",
+  "repository": "https://github.com/zjzj1206/study-hub",
+  "projects": [
+    {"id":"ics","path":"/ics/","repository":"https://github.com/zjzj1206/ics-review","sourceCommit":"8958475b28677c8f7c837982511ebef24be0f33d"},
+    {"id":"gaodang","path":"/gaodang/","repository":"https://github.com/zjzj1206/gaodang-review","private":true,"encrypted":true,"sourceVersion":"2026-10-01-initial"}
+  ]
+}
