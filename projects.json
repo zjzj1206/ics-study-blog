@@ -15,7 +15,8 @@
       "private": true,
       "encrypted": true,
       "sourceVersion": "2026-10-01-initial",
-      "status": "access-control-pending"
+      "status": "password-protected"
     }
-  ]
+  ],
+  "hosting": "Cloudflare Pages: zjzj-study-hub"
 }
