@@ -1,0 +1,21 @@
+name: Clean legacy ICS pages from hub root
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/cleanup-root.yml'
+permissions:
+  contents: write
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove only duplicated root ICS HTML
+        run: |
+          git rm --ignore-unmatch -- 00-guide.html 01-overview.html 02-integers.html 03-floating-point.html 04-assembly-basics.html 05-control.html 06-procedures.html 07-data.html 08-advanced.html 09-architecture.html 10-optimization.html 11-memory.html 12-past-papers.html 13-seminars.html 14-coverage.html all.html
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Remove duplicate ICS pages from hub root; keep /ics/'
+          git push
