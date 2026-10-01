@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>07 · 数组、结构体、指针与浮点汇编 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="/">项目总览</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a aria-current=page href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>07 · 数组、结构体、指针与浮点汇编</h1>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>07 · 数组、结构体、指针与浮点汇编 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="https://blog.zjzj.work/">学习空间</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a aria-current=page href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="12-past-papers.html">09 · 往年题导航与勘误</a><a  href="13-seminars.html">10 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">11 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>07 · 数组、结构体、指针与浮点汇编</h1>
 <p>来源：第 7 讲 pp.3～51（包括附加材料）；小班第 7 讲；教材 §3.8～3.9、§3.11；2025 阶段卷第 18～22 题。</p>
 <h2 id="section-1">一维数组与指针算术<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
 <p>T A[N] 为 N 个连续 T 对象分配 N·sizeof(T) 字节。<code>&amp;A[i] = base+i·sizeof(T)</code>，<code>A[i]=*(A+i)</code>。指针加 1 是增加一个所指对象的跨度，而不是一字节。</p>
@@ -25,15 +25,15 @@ int variable(size_t n, int a[n][n], size_t i, size_t j) {
 <tr>
 <th>声明</th>
 <th>A 是什么</th>
-<th>sizeof A</th>
-<th>sizeof *A</th>
-<th>sizeof **A</th>
-<th>sizeof ***A</th>
+<th><code>sizeof A</code></th>
+<th><code>sizeof *A</code></th>
+<th><code>sizeof **A</code></th>
+<th><code>sizeof ***A</code></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>int A[3][5]</td>
+<td><code>int A[3][5]</code></td>
 <td>二维 int 数组</td>
 <td>60</td>
 <td>20</td>
@@ -41,7 +41,7 @@ int variable(size_t n, int a[n][n], size_t i, size_t j) {
 <td>非法类型表达式</td>
 </tr>
 <tr>
-<td>int *A[3][5]</td>
+<td><code>int *A[3][5]</code></td>
 <td>二维 int 指针数组</td>
 <td>120</td>
 <td>40</td>
@@ -49,7 +49,7 @@ int variable(size_t n, int a[n][n], size_t i, size_t j) {
 <td>4</td>
 </tr>
 <tr>
-<td>int (*A)[3][5]</td>
+<td><code>int (*A)[3][5]</code></td>
 <td>指向整个二维数组的指针</td>
 <td>8</td>
 <td>60</td>
@@ -57,7 +57,7 @@ int variable(size_t n, int a[n][n], size_t i, size_t j) {
 <td>4</td>
 </tr>
 <tr>
-<td>int (*A[3])[5]</td>
+<td><code>int (*A[3])[5]</code></td>
 <td>3 个指针，每个指向 5 个 int 的数组</td>
 <td>24</td>
 <td>8</td>
@@ -65,7 +65,7 @@ int variable(size_t n, int a[n][n], size_t i, size_t j) {
 <td>4</td>
 </tr>
 <tr>
-<td>int *(*A[2])[3]</td>
+<td><code>int *(*A[2])[3]</code></td>
 <td>2 个指针，每个指向 3 个 int* 的数组</td>
 <td>16</td>
 <td>8</td>

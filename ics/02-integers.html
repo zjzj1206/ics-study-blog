@@ -1,14 +1,48 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>02 · 位、字节与整数 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="/">项目总览</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a aria-current=page href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="09-architecture.html">09 · 旧期中扩展：处理器体系结构</a><a  href="10-optimization.html">10 · 旧期中扩展：程序性能优化</a><a  href="11-memory.html">11 · 旧期中扩展：存储器与缓存</a><a  href="12-past-papers.html">12 · 往年题导航与勘误</a><a  href="13-seminars.html">13 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">14 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>02 · 位、字节与整数</h1>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>02 · 位、字节与整数 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="https://blog.zjzj.work/">学习空间</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a aria-current=page href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a  href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="12-past-papers.html">09 · 往年题导航与勘误</a><a  href="13-seminars.html">10 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">11 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>02 · 位、字节与整数</h1>
 <p>来源：第 2 讲 pp.3～68；小班第 2 讲；教材 §2.1～2.3。以下公式中的 w 是位宽，所有“模运算”都明确指无符号或固定位向量模型。</p>
 <h2 id="section-1">进制、字长与存储单位<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
 <p>一个十六进制位恰好对应 4 个二进制位。十六进制便于压缩表示位串且保持位边界，十进制便于人的数量理解。<code>0xDA = 11011010₂ = 218</code>；8 位补码解释则是 <code>218-256=-38</code>。</p>
-<p>|类型|Linux x86-64 常见字节数|补充|
-|char|1|普通 char 是否带符号由实现决定|
-|short|2|通常 16 位|
-|int|4|通常 32 位|
-|long / long long|8 / 8|Windows x64 的 long 常为 4|
-|float / double|4 / 8|IEEE binary32 / binary64|
-|指针|8|指针大小与所指对象大小无关|</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>Linux x86-64 常见字节数</th>
+<th>补充</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>char</td>
+<td>1</td>
+<td>普通 char 是否带符号由实现决定</td>
+</tr>
+<tr>
+<td>short</td>
+<td>2</td>
+<td>通常 16 位</td>
+</tr>
+<tr>
+<td>int</td>
+<td>4</td>
+<td>通常 32 位</td>
+</tr>
+<tr>
+<td>long / long long</td>
+<td>8 / 8</td>
+<td>Windows x64 的 long 常为 4</td>
+</tr>
+<tr>
+<td>float / double</td>
+<td>4 / 8</td>
+<td>IEEE binary32 / binary64</td>
+</tr>
+<tr>
+<td>指针</td>
+<td>8</td>
+<td>指针大小与所指对象大小无关</td>
+</tr>
+</tbody>
+</table></div>
 <p>C 只保证 <code>sizeof(char)==1</code>，一个 C 字节的位数由 <code>CHAR_BIT</code> 指定；本课假设 8 位字节。机器字长、C 的 int、汇编 <code>word</code> 不是同一概念：x86 的 word 是 16 位，quadword 是 64 位。KiB、MiB、GiB 严格对应 2¹⁰、2²⁰、2³⁰ 字节；KB/MB/GB 应看题设和厂商约定。</p>
 <h2 id="section-2">大小端与字符<a class="anchor" href="#section-2" aria-label="链接到本节">#</a></h2>
 <p>数值 <code>0x1234ABCD</code> 存在地址 p 开始的 4 个字节：</p>
@@ -77,11 +111,32 @@ TMin = -2^(w-1)         TMax = 2^(w-1)-1
 <p>同位宽有符号→无符号：非负值不变，负值 x 映射到 x+2ʷ。反向按本课补码实现，若 u&gt; TMax 则解释为 u-2ʷ。在 C 中，把不可表示无符号值转成有符号类型的具体规定应按所用标准和实现，不当作通用数学转换。</p>
 <p>加宽：无符号零扩展；有符号符号扩展。例如 8 位 -12 为 F4，扩为 32 位是 FFFFFFF4。截断：只保留低 k 位，再按目标类型解释。加宽后再改成无符号时，应保持原值所要求的扩展，例如 <code>short s=-1; unsigned u=s;</code> 在本平台得到 0xFFFFFFFF，而不是 0x0000FFFF。</p>
 <p>通常算术转换先做整数提升，再处理等级和可表示范围，<strong>不是只要出现 unsigned 就一律全变 unsigned</strong>：</p>
-<p>|表达式|本平台解释|
-|<code>-1 &lt; 1u</code>|同等级转换为 unsigned int，结果假|
-|<code>-1L &lt; 1u</code>|64 位 long 可表示所有 32 位 unsigned int，结果真|
-|<code>sizeof(a)-1</code>|结果类型通常是无符号 size_t，零长度时会回绕|
-|<code>unsigned char a=255; a+1</code>|先提升为 int，表达式为 256；再存回 a 才变 0|</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>表达式</th>
+<th>本平台解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-1 &lt; 1u</code></td>
+<td>同等级转换为 unsigned int，结果假</td>
+</tr>
+<tr>
+<td><code>-1L &lt; 1u</code></td>
+<td>64 位 long 可表示所有 32 位 unsigned int，结果真</td>
+</tr>
+<tr>
+<td><code>sizeof(a)-1</code></td>
+<td>结果类型通常是无符号 size_t，零长度时会回绕</td>
+</tr>
+<tr>
+<td><code>unsigned char a=255; a+1</code></td>
+<td>先提升为 int，表达式为 256；再存回 a 才变 0</td>
+</tr>
+</tbody>
+</table></div>
 <p>十进制无后缀字面量与十六进制字面量的候选类型序列不同；<code>-2147483648</code> 是一元负号作用于正字面量，不应未经分析就认定正字面量已经是 int。用 <code>&lt;stdint.h&gt;</code> 固定宽度类型、<code>INT_MIN</code> 等宏有助于明确题设。</p>
 <h2 id="section-7">加、减、乘与溢出<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
 <p>无符号加法是 <code>(x+y) mod 2^w</code>；判断溢出可比较结果是否小于任一操作数，或在运算前判断 <code>x &gt; UMax-y</code>。补码硬件加法也保留低 w 位：两个同号数相加得到异号结果才是有符号溢出。异号相加不会有符号溢出。</p>
