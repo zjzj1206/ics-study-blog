@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · 机器级编程基础 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="https://blog.zjzj.work/">学习空间</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a aria-current=page href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="12-past-papers.html">09 · 往年题导航与勘误</a><a  href="13-seminars.html">10 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">11 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.01</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>04 · 机器级编程基础</h1>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · 机器级编程基础 · ZJZJ / ICS</title><meta name="description" content="北京大学 ICS 复习手册：课程知识、公式推导、边界情况、小班拓展与往年题导航。"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="style.css"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body><a class="skip" href="#main">跳到正文</a><header><a class="brand" href="index.html">ZJZJ<span> / ICS NOTES</span></a><div class="header-right"><a href="https://blog.zjzj.work/">学习空间</a><a href="all.html">整本阅读</a><button type="button" onclick="window.print()">打印</button><button id="menu" aria-expanded="false" aria-controls="chapters">目录</button></div></header><div class="layout"><nav id="chapters" aria-label="章节目录"><div class="nav-label">2026 · 复习手册</div><a  href="00-guide.html">复习范围与使用说明</a><a  href="01-overview.html">01 · 系统概述与基本模型</a><a  href="02-integers.html">02 · 位、字节与整数</a><a  href="03-floating-point.html">03 · 浮点表示、舍入与运算</a><a aria-current=page href="04-assembly-basics.html">04 · 机器级编程基础</a><a  href="05-control.html">05 · 条件码、分支、循环与 switch</a><a  href="06-procedures.html">06 · 过程调用、栈与 ABI</a><a  href="07-data.html">07 · 数组、结构体、指针与浮点汇编</a><a  href="08-advanced.html">08 · 机器级进阶与内存安全</a><a  href="12-past-papers.html">09 · 往年题导航与勘误</a><a  href="13-seminars.html">10 · 小班拓展、边角知识与作业路线</a><a  href="14-coverage.html">11 · 课件覆盖索引与来源</a><div class="nav-foot">依据本地课件与公开题库<br>更新于 2026.10.03</div></nav><main id="main"><div class="eyebrow">COMPUTER SYSTEMS · PEKING UNIVERSITY</div><h1>04 · 机器级编程基础</h1>
 <p>来源：第 4 讲；第 5 讲 pp.2～8；小班第 4 讲；教材 §3.1～3.5。</p>
 <h2 id="section-1">历史与抽象层次<a class="anchor" href="#section-1" aria-label="链接到本节">#</a></h2>
 <p>x86 经 8086 的 16 位、80386 的 IA-32 32 位，发展到 x86-64；AMD64 是对 x86 的 64 位扩展，Intel 的 Itanium/IA-64 是不同路线，不能把 IA-64 当作 x86-64 的别名。历史兼容性解释了寄存器别名与多种指令形式。课件中 Coffee Lake 等参数是历史案例，不是 2026 年最新硬件。</p>
@@ -124,7 +124,118 @@
 </tbody>
 </table></div>
 <p>不要把乘除法后的所有标志都当成可用比较结果；例如 imul 主要通过 CF/OF 指示截断，除法后相关算术标志未定义。</p>
-<h2 id="section-7">双倍宽乘除<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h2>
+<h3 id="section-7">逐条看数据结果与条件码<a class="anchor" href="#section-7" aria-label="链接到本节">#</a></h3>
+<p>下表各行独立从 <code>%rax=10</code>、<code>%rbx=3</code> 开始，AT&amp;T 的源在前、目的在后：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>指令</th>
+<th>计算</th>
+<th>执行后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>addq %rbx,%rax</code></td>
+<td>目的加源</td>
+<td>rax=13</td>
+</tr>
+<tr>
+<td><code>subq %rbx,%rax</code></td>
+<td>目的减源</td>
+<td>rax=7</td>
+</tr>
+<tr>
+<td><code>incq %rax</code></td>
+<td>加 1</td>
+<td>rax=11；保留原 CF</td>
+</tr>
+<tr>
+<td><code>decq %rax</code></td>
+<td>减 1</td>
+<td>rax=9；保留原 CF</td>
+</tr>
+<tr>
+<td><code>cmpq %rbx,%rax</code></td>
+<td>按 10−3 设置标志</td>
+<td>rax、rbx 都不变</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>inc</code> 与 <code>add $1</code> 的数据结果相同，但只有前者保留 CF。<code>cmp S,D</code> 对应比较 D 与 S，不要把减法方向反过来。</p>
+<p><code>neg</code> 算 <code>0-D</code>，<code>not</code> 算逐位取反。例如 8 位 5=<code>00000101</code>：neg 得 <code>11111011</code>（−5），not 得 <code>11111010</code>（−6）。neg 原操作数非零时 CF=1；最小负数取负位模式不变且 OF=1。not 不修改标志。</p>
+<h3 id="section-8">二／三操作数乘法与判零<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h3>
+<pre><code class="language-asm">imulq %rbx,%rax       # 旧 rax * rbx，保留低 64 位
+imulq $7,%rbx,%rax    # 7 * rbx，保留低 64 位；不用旧 rax
+</code></pre>
+<p>完整有符号乘积能由目标宽度表示时 CF=OF=0，否则为 1。不能简单按“高半部非零”判断：负积的高位可能只是正常符号扩展。ZF/SF/PF 等在 imul 后未定义，不能直接用 <code>je</code> 判断结果为零；应显式更新标志：</p>
+<pre><code class="language-asm">imulq %rbx,%rax
+testq %rax,%rax
+je zero              # 判断保留下来的低 64 位是否为零
+</code></pre>
+<p>这不是判断无限精度乘积是否为零。单操作数 imul 的完整积规则见下一节。</p>
+<h3 id="section-9">位运算与不写回的 test<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h3>
+<pre><code class="language-asm">andq $15,%rax        # 保留低 4 位
+orq  $1,%rax         # 最低位置 1
+xorq $1,%rax         # 最低位翻转
+xorq %rax,%rax       # 清零；ZF=1、SF=0、PF=1、CF=OF=0
+testq %rax,%rax      # 按 rax &amp; rax 更新标志，rax 不变
+</code></pre>
+<p>AND 两位都为 1 才为 1；OR 至少一位为 1 即为 1；XOR 两位不同才为 1。test 与 and 的关系类似 cmp 与 sub：计算标志但不写回。上述逻辑指令的 AF 未定义，不要把“更新标志”理解成每个标志都有可用值。</p>
+<h3 id="section-10">移位计数、右移舍入与标志<a class="anchor" href="#section-10" aria-label="链接到本节">#</a></h3>
+<p>sal 与 shl 是同一种左移。8 位 <code>11111000</code>（−8）右移 1 位：sar 得 <code>11111100</code>（−4），shr 得 <code>01111100</code>（124）。sar 对负数向下取整，故 −7 算术右移 1 位为 −4，而 C 的 <code>-7/2</code> 为 −3。</p>
+<p>传统标量移位的计数来自立即数或 <code>%cl</code>：<code>salq $3,%rax</code>、<code>salq %cl,%rax</code>。64 位操作用计数低 6 位，8/16/32 位操作用低 5 位。cl=64 时 salq 的有效计数为 0，cl=65 时为 1；这是指令规则，不能让 C 中 <code>x&lt;&lt;64</code>（64 位 x）变合法。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>有效计数</th>
+<th>标志含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>所有标志保持原值</td>
+</tr>
+<tr>
+<td>非零</td>
+<td>ZF/SF/PF 根据结果更新；AF 未定义</td>
+</tr>
+<tr>
+<td>1</td>
+<td>OF 有定义，见下表</td>
+</tr>
+<tr>
+<td>大于 1</td>
+<td>OF 未定义，不能据此用 jo 判断溢出</td>
+</tr>
+</tbody>
+</table></div>
+<p>CF 通常记录最后移出的位；但 SHL/SHR 在有效计数不小于操作宽度时 CF 未定义，8/16 位操作尤其要注意。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>计数为 1 的指令</th>
+<th>OF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sal/shl</td>
+<td>结果最高位与 CF 异或</td>
+</tr>
+<tr>
+<td>shr</td>
+<td>原操作数最高位</td>
+</tr>
+<tr>
+<td>sar</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些是传统 SAL/SAR/SHL/SHR 的规则，不推广到其他指令族。<code>div/idiv</code> 后 CF/OF/SF/ZF/AF/PF 均未定义，检查商也需另做 cmp/test。依据：<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel 指令手册，卷 2</a>。</p>
+<h2 id="section-11">双倍宽乘除<a class="anchor" href="#section-11" aria-label="链接到本节">#</a></h2>
 <p>64 位单操作数 <code>mulq S</code>：无符号 <code>rdx:rax = rax*S</code>；<code>imulq S</code>：有符号的 128 位乘积。二操作数 <code>imulq S,D</code> 与单操作数形式不同，不能混淆隐含寄存器。</p>
 <p><code>divq S</code>/<code>idivq S</code> 用 rdx:rax 作为 128 位被除数，商写 rax、余数写 rdx。无符号 64 位被除数通常先清 rdx；有符号先 <code>cqto</code>。除数为零或商超出目标寄存器范围触发除法异常；<code>TMin / -1</code> 是常见边界。idiv 商向零截断，余数与被除数同号或为零。</p>
 <pre><code class="language-asm"># long x / long y，x 在 rdi，y 在 rsi
@@ -132,7 +243,7 @@ movq %rdi, %rax
 cqto
 idivq %rsi          # 商 rax，余数 rdx
 </code></pre>
-<h2 id="section-8">解读代码的方法<a class="anchor" href="#section-8" aria-label="链接到本节">#</a></h2>
+<h2 id="section-12">解读代码的方法<a class="anchor" href="#section-12" aria-label="链接到本节">#</a></h2>
 <p>为每个寄存器写一个符号表达式，逐条替换；只在内存读写时引入 <code>M[address]</code>。例如：</p>
 <pre><code class="language-asm">leaq (%rdi,%rdi,2), %rax    # 3*x
 leaq (%rax,%rsi,4), %rax    # 3*x + 4*y
@@ -140,6 +251,6 @@ subq %rdx, %rax            # 3*x + 4*y - z
 ret
 </code></pre>
 <p>计数访问时先看题目是否排除取指。<code>movq (%rdi),%rax</code> 有地址寄存器读取、数据寄存器写入和一次数据内存读取；与“几个操作数”不是同一个计数口径。2025 阶段卷 swap 四条 mov 按其口径共 8 次通用寄存器访问、4 次数据内存访问。</p>
-<h2 id="section-9">自检<a class="anchor" href="#section-9" aria-label="链接到本节">#</a></h2>
+<h2 id="section-13">自检<a class="anchor" href="#section-13" aria-label="链接到本节">#</a></h2>
 <p>能检查任意 mov 是否有非法操作数组合；区分地址计算和解引用；追踪子寄存器写入；解释乘除的隐含寄存器；把复杂算式还原为 C，并保留类型/溢出的前提。教材作业 3.58、3.59。</p>
-<div class="pager"><a href="03-floating-point.html">上一章<br>03 · 浮点表示、舍入与运算</a><a href="05-control.html">下一章<br>05 · 条件码、分支、循环与 switch</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">历史与抽象层次</a><a href="#section-2">AT&amp;T 语法</a><a href="#section-3">全部通用寄存器与局部访问</a><a href="#section-4">寻址与 LEA</a><a href="#section-5">数据传送和扩展</a><a href="#section-6">算术与逻辑指令</a><a href="#section-7">双倍宽乘除</a><a href="#section-8">解读代码的方法</a><a href="#section-9">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>
+<div class="pager"><a href="03-floating-point.html">上一章<br>03 · 浮点表示、舍入与运算</a><a href="05-control.html">下一章<br>05 · 条件码、分支、循环与 switch</a></div><footer>理解表示，追踪执行。<span><a href="14-coverage.html">资料来源与覆盖范围</a></span></footer></main><aside aria-label="本页目录"><div class="nav-label">本页内容</div><a href="#section-1">历史与抽象层次</a><a href="#section-2">AT&amp;T 语法</a><a href="#section-3">全部通用寄存器与局部访问</a><a href="#section-4">寻址与 LEA</a><a href="#section-5">数据传送和扩展</a><a href="#section-6">算术与逻辑指令</a><a href="#section-7">逐条看数据结果与条件码</a><a href="#section-8">二／三操作数乘法与判零</a><a href="#section-9">位运算与不写回的 test</a><a href="#section-10">移位计数、右移舍入与标志</a><a href="#section-11">双倍宽乘除</a><a href="#section-12">解读代码的方法</a><a href="#section-13">自检</a><a href="#main">回到顶部 ↑</a></aside></div><script src="app.js"></script></body></html>
