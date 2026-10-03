@@ -12,8 +12,10 @@
 
 ```sh
 python3 -m pip install -r requirements.txt
+npm ci
 python3 build.py
 python3 checks/verify.py
+python3 checks/verify_math.py
 python3 -m http.server 8765 --directory dist
 ```
 
@@ -24,3 +26,17 @@ python3 -m http.server 8765 --directory dist
 将 dist 内容同步到独立仓库根目录、study-hub 的 ics/。删除旧 09-architecture.html、10-optimization.html、11-memory.html，不上传 ICS 独立 CNAME，不把章节放回学习空间根目录。
 
 正式托管是 Cloudflare Pages 的 zjzj-study-hub；GitHub 提交不会自动更新网站。完整部署由高党项目整合，其受保护内容及服务端鉴权文件必须保留，只替换 /ics/。具体流程见该项目 gaodang-site/DEPLOYMENT.md。完整部署包只上传 Cloudflare，公开 GitHub 仅接收总览及 ICS 文件。
+
+## Markdown 数学公式
+
+行内公式写作 `$2^{w}-1$`，独立公式用单独成行的 `$$` 包围：
+
+```markdown
+$$
+\operatorname{B2U}(x)=\sum_{i=0}^{w-1}x_i2^i
+$$
+```
+
+支持分式、上下标、求和、矩阵、aligned 对齐和 cases 分段式。数学中的竖线请用 `\lvert`、`\rvert` 或 `\mid`，避免干扰 Markdown 表格。C 和汇编继续放在反引号或代码块里，立即数 `$8` 不会作为公式解析。
+
+构建需要 Python 依赖和 Node.js；KaTeX 版本由 package-lock.json 固定。公式在构建时生成 HTML + MathML，CSS 和字体随网站托管，不依赖第三方 CDN 或浏览器 JavaScript。非法公式会中止构建，避免错误公式上线。长公式与宽表格可横向滚动。
