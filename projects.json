@@ -16,6 +16,14 @@
       "encrypted": true,
       "sourceVersion": "2026-10-01-initial",
       "status": "password-protected"
+    },
+    {
+      "id": "discrete",
+      "title": "离散数学与结构 (I)",
+      "path": "/discrete/",
+      "repository": "https://github.com/zjzj1206/discrete-review",
+      "sourceCommit": "250c680",
+      "status": "live"
     }
   ],
   "hosting": "Cloudflare Pages: zjzj-study-hub"
