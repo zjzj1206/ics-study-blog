@@ -18,7 +18,7 @@
 <h2 id="section-3">处理器与内存<a class="anchor" href="#section-3" aria-label="链接到本节">#</a></h2>
 <p>CPU 中，程序计数器 PC（x86-64 为 <code>%rip</code>）指向执行位置，寄存器保存临时数据，ALU 完成算术和逻辑运算，条件码记录部分结果性质。内存是按字节寻址的存储空间，程序通过地址访问数据。总线传递地址、数据和控制信号。</p>
 <p>以 <code>addq %rdx,(%rcx)</code> 为例：取指并译码 → 读 <code>%rcx</code> 得到地址 → 读该地址的 8 字节 → 读 <code>%rdx</code> → ALU 做 64 位加法 → 把低 64 位写回内存 → 更新条件码。额外的进位由 CF 记录，不会自动多写第 9 字节。此处描述的是体系结构语义，不规定现代 CPU 内部必须按这些步骤串行实现。</p>
-<p>**ISA 与微体系结构：**ISA 规定软件可见的指令、寄存器、编码和行为；微体系结构决定流水线、执行单元、预测与缓存如何实现这些行为。不同 CPU 可以实现同一个 ISA。</p>
+<p><strong>ISA 与微体系结构</strong>：ISA 规定软件可见的指令、寄存器、编码和行为；微体系结构决定流水线、执行单元、预测与缓存如何实现这些行为。不同 CPU 可以实现同一个 ISA。</p>
 <h2 id="section-4">五个贯穿全课的问题<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
 <div class="table-scroll"><table>
 <thead>

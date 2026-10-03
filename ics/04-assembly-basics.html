@@ -38,7 +38,7 @@
 </tbody>
 </table></div>
 <p>历史高字节 ah/bh/ch/dh 是对应低 16 位的高 8 位，不能与需要 REX 前缀的某些操作数组合使用。</p>
-<p>**写 32 位通用寄存器会清零对应 64 位寄存器高 32 位；写 8/16 位通常保留其他位。**若 rax 原为 FFFFFFFFFFFFFFFF，<code>movb $1,%al</code> 后为 FFFFFFFFFFFFFF01；<code>movl $1,%eax</code> 后为 0000000000000001。读取 eax 不会自行改写 rax。</p>
+<p><strong>写 32 位通用寄存器会清零对应 64 位寄存器高 32 位；写 8/16 位通常保留其他位</strong>。若 rax 原为 FFFFFFFFFFFFFFFF，<code>movb $1,%al</code> 后为 FFFFFFFFFFFFFF01；<code>movl $1,%eax</code> 后为 0000000000000001。读取 eax 不会自行改写 rax。</p>
 <h2 id="section-4">寻址与 LEA<a class="anchor" href="#section-4" aria-label="链接到本节">#</a></h2>
 <pre><code class="language-text">D(Rb,Ri,S) 的有效地址 = D + R[Rb] + S·R[Ri]
 S ∈ {1,2,4,8}，省略的项按默认规则处理
